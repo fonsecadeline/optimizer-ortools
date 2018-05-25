@@ -442,6 +442,17 @@ void RelationBuilder(const TSPTWDataDT &data, RoutingModel &routing, Solver *sol
           }
         }
         break;
+      case SameService:
+        {
+          previous_index = data.IdIndex(relation->linked_ids->at(0));
+          for (int link_index = 1 ; link_index < relation->linked_ids->size(); ++link_index) {
+            current_index = data.IdIndex(relation->linked_ids->at(link_index));
+            IntVar *const previous_active_var = routing.ActiveVar(previous_index);
+            IntVar *const active_var = routing.ActiveVar(current_index);
+            solver->AddConstraint(solver->MakeEquality(previous_active_var, active_var));
+          }
+        }
+        break;
       default:
         break;
     }
