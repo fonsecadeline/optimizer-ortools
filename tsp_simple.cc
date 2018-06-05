@@ -417,6 +417,35 @@ void RelationBuilder(const TSPTWDataDT &data, RoutingModel &routing, Solver *sol
           }
         }
         break;
+      case ConflictingServices:
+        {
+          for (int vehicle_index = 0 ; vehicle_index < relation->linked_vehicle_ids->size(); ++vehicle_index ){
+            std::vector<IntVar*> used_skill;
+            for (int set = 0 ; set < relation->linked_sets->size() ; ++set ){
+              std::vector<IntVar*> services_of_this_skill_assigned;
+              for (std::string service: relation->linked_sets->at(set)) {
+                int64 service_node_index = data.IdIndex(service);
+                // vehicle assigned to this service
+                IntVar *const vehicle_assigned = routing.VehicleVar(service_node_index)->Var();
+                // is this particular vehicle assigned
+                IntVar *const this_vehicle_assigned = solver->MakeIsEqualCstVar(vehicle_assigned, data.IdIndex(relation->linked_vehicle_ids->at(vehicle_index)))->Var();
+                services_of_this_skill_assigned.push_back(this_vehicle_assigned);
+
+                RoutingModel::NodeIndex service_node = RoutingModel::NodeIndex(service_node_index);
+
+                // we repeat this for all alternative
+                for (RoutingModel::NodeIndex alternative_index = service_node - 1 ; alternative_index > service_node - data.AlternativeSize(data.ProblemIndex(service_node)) ; --alternative_index ){
+                  IntVar *const vehicle_assigned_alternative = routing.VehicleVar(alternative_index.value())->Var();
+                  IntVar *const this_vehicle_assigned_alternative = solver->MakeIsEqualCstVar(vehicle_assigned_alternative, data.IdIndex(relation->linked_vehicle_ids->at(vehicle_index)))->Var();
+                  services_of_this_skill_assigned.push_back(this_vehicle_assigned_alternative);
+                }
+              }
+              IntVar *const skill_is_used = solver->MakeMax(services_of_this_skill_assigned)->Var();
+              used_skill.push_back(skill_is_used);
+            }
+            solver->AddConstraint(solver->MakeLessOrEqual(solver->MakeSum(used_skill), 1));
+          }
+        }
       default:
         break;
     }

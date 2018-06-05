@@ -16,7 +16,7 @@
 
 #define CUSTOM_MAX_INT (int64)std::pow(2,30)
 
-enum RelationType { VehicleGroupDuration = 11, ForceLast = 10, ForceFirst = 9, NeverFirst = 8, MaximumDurationLapse = 7, MeetUp = 6, Shipment = 5, MaximumDayLapse = 4, MinimumDayLapse = 3, SameRoute = 2, Order = 1, Sequence = 0 };
+enum RelationType { ConflictingServices = 12, VehicleGroupDuration = 11, ForceLast = 10, ForceFirst = 9, NeverFirst = 8, MaximumDurationLapse = 7, MeetUp = 6, Shipment = 5, MaximumDayLapse = 4, MinimumDayLapse = 3, SameRoute = 2, Order = 1, Sequence = 0 };
 enum ShiftPref { ForceStart = 2, ForceEnd = 1, MinimizeSpan = 0 };
 
 namespace operations_research {
@@ -430,15 +430,16 @@ public:
 
   struct Relation {
     Relation(int relation_no):
-        relation_number(relation_no), type(Order), linked_ids(NULL), linked_vehicle_ids(NULL), lapse(-1){}
+        relation_number(relation_no), type(Order), linked_ids(NULL), linked_vehicle_ids(NULL), linked_sets(NULL), lapse(-1){}
     Relation(int relation_no, RelationType t, std::vector<std::string>* l_i):
-        relation_number(relation_no), type(t), linked_ids(l_i), linked_vehicle_ids(NULL), lapse(-1){}
-    Relation(int relation_no, RelationType t, std::vector<std::string>* l_i, std::vector<std::string>* l_v_i, int32 l):
-        relation_number(relation_no), type(t), linked_ids(l_i), linked_vehicle_ids(l_v_i), lapse(l){}
+        relation_number(relation_no), type(t), linked_ids(l_i), linked_vehicle_ids(NULL), linked_sets(NULL), lapse(-1){}
+    Relation(int relation_no, RelationType t, std::vector<std::string>* l_i, std::vector<std::string>* l_v_i, std::vector<std::vector<std::string> >* l_s, int32 l):
+        relation_number(relation_no), type(t), linked_ids(l_i), linked_vehicle_ids(l_v_i), linked_sets(l_s), lapse(l){}
         int relation_number;
         RelationType type;
         std::vector<std::string>* linked_ids;
         std::vector<std::string>* linked_vehicle_ids;
+        std::vector<std::vector<std::string> >* linked_sets;
         int32 lapse;
   };
 
@@ -861,6 +862,14 @@ void TSPTWDataDT::LoadInstance(const std::string & filename) {
     for (const std::string linked_v_id: relation.linked_vehicle_ids()) {
       linked_v_ids->push_back(linked_v_id);
     }
+    std::vector<std::vector<std::string> >* linked_sets = new std::vector<std::vector<std::string> > ();
+    for (int i = 0; i < relation.linked_sets_size(); i++){
+      std::vector<std::string> services_set;
+      const ortools_vrp::List& set = relation.linked_sets(i);
+      for (int j = 0 ; j < set.list_size() ; j++)
+        services_set.push_back(set.list(j));
+      linked_sets->push_back(services_set);
+    }
 
     RelationType type;
     if (relation.type() == "sequence") type = Sequence;
@@ -878,11 +887,13 @@ void TSPTWDataDT::LoadInstance(const std::string & filename) {
     else if (relation.type() == "never_first") type = NeverFirst;
     else if (relation.type() == "force_end") type = ForceLast;
     else if (relation.type() == "vehicle_group_duration") type = VehicleGroupDuration;
+    else if (relation.type() == "uncompatible_services") type = ConflictingServices;
 
     tsptw_relations_.push_back(new Relation(re_index,
                                         type,
                                         linked_ids,
                                         linked_v_ids,
+                                        linked_sets,
                                         relation.lapse()));
     ++re_index;
   }

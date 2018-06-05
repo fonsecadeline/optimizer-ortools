@@ -68,11 +68,16 @@ message Vehicle {
   int64 additional_setup = 26;
 }
 
+message List {
+  repeated string list = 1;
+}
+
 message Relation {
   string type = 1;
   repeated string linked_ids = 2;
   int32 lapse = 3;
   repeated string linked_vehicle_ids = 4;
+  repeated List linked_sets = 5;
 }
 
 message Route {
