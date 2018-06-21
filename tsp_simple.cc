@@ -723,13 +723,13 @@ int TSPTWSolver(const TSPTWDataDT &data, std::string filename) {
     if (has_overall_duration) {
       if (FLAGS_debug) std::cout << "Christofides" << std::endl;
       parameters.set_first_solution_strategy(FirstSolutionStrategy::CHRISTOFIDES);
-    } else if (shift_preference == ForceStart || ((float)size_mtws)/size_missions > 0.2) {
+    } else if (size_rest == 0 && (shift_preference == ForceStart || ((float)size_mtws)/size_missions > 0.2)) {
       if (FLAGS_debug) std::cout << "Path Cheapest Arc" << std::endl;
       parameters.set_first_solution_strategy(FirstSolutionStrategy::PATH_CHEAPEST_ARC);
     } else if (has_route_duration && size_vehicles == 1) {
       if (FLAGS_debug) std::cout << "Global Cheapest Arc" << std::endl;
       parameters.set_first_solution_strategy(FirstSolutionStrategy::GLOBAL_CHEAPEST_ARC);
-    } else if (size_rest > 0 && size_vehicles == 1 || data.DeliveriesCounter() > 0 || size_mtws > 0) {
+    } else if (size_rest > 0 && size_vehicles == 1 && shift_preference != ForceStart || data.DeliveriesCounter() > 0 || size_mtws > 0) {
       if (FLAGS_debug) std::cout << "Local Cheapest Insertion" << std::endl;
       parameters.set_first_solution_strategy(FirstSolutionStrategy::LOCAL_CHEAPEST_INSERTION);
     } else if (size_rest == 0 && loop_route && unique_configuration && size_vehicles < 10 && !has_route_duration) {
